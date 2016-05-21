@@ -1,10 +1,5 @@
 
-The official repository of BaublesHud.
-
-BaublesHud is a small add-on for Baubles that allows you to see your equipped Baubles at all times.
-
-TODO
-Make the HUD moveable.
+The official repository of NEILootbags.
 
 
 Building
