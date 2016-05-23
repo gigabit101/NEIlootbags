@@ -13,7 +13,9 @@ import codechicken.nei.PositionedStack;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import mal.lootbags.Bag;
 import mal.lootbags.LootBags;
+import mal.lootbags.LootbagsUtil;
 import mal.lootbags.handler.BagHandler;
+import mal.lootbags.item.LootbagItem;
 import mal.lootbags.loot.LootItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -59,19 +61,31 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 	public void loadCraftingRecipes(ItemStack result) 
 	{
 		bagtype = 0;
-		for (int k = 0; k < 4; k++) 
+		for (int k = 0; k < BagHandler.getHighestUsedID(); k++) 
 		{
 			Bag b = BagHandler.getBag(k);
 
 			for (int i = 0; i < b.getMap().size(); i++) 
 			{
-				if (LootBags.areItemStacksEqualItem(b.getSpecificItem(i), result, false, false)) 
+				if (LootBags.areItemStacksEqualItem(b.getSpecificItem(i), result, true, true)) 
 				{
 					arecipes.add(new CachedLootRecipe(result, k));
 					this.bagtype = k;
 					break;
 				}
 			}
+		}
+	}
+	
+	@Override
+	public void loadUsageRecipes(ItemStack ingredient) 
+	{
+		if (ingredient.getItem() instanceof LootbagItem)
+		{
+			int meta = ingredient.getItemDamage();
+			Bag b = BagHandler.getBag(meta);
+			this.bagtype = meta;
+			arecipes.add(new CachedLootRecipe(b.getSpecificItem(0), meta));
 		}
 	}
 

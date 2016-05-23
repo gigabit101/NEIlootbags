@@ -14,7 +14,7 @@ public class NEIConfig implements IConfigureNEI
 	@Override
 	public String getVersion() 
 	{
-		return "1.1.1";
+		return "1.1.2";
 	}
 
 	@Override
