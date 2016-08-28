@@ -10,6 +10,7 @@ import org.lwjgl.opengl.GL11;
 
 import codechicken.lib.gui.GuiDraw;
 import codechicken.nei.PositionedStack;
+import codechicken.nei.recipe.GuiRecipe;
 import codechicken.nei.recipe.TemplateRecipeHandler;
 import mal.lootbags.Bag;
 import mal.lootbags.LootBags;
@@ -30,6 +31,10 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 	private static final int SPACING_X = 166 / 9;
 	private static final int SPACING_Y = 80 / 4;
 	private static int bagtype;
+    private static int lastRecipe = -1;
+    private static int CYCLE_TIME = (int) (20 * 2);
+
+
 
 	@Override
 	public String getRecipeName() 
@@ -56,7 +61,7 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 	{
 		return 1;
 	}
-
+	
 	@Override
 	public void loadCraftingRecipes(ItemStack result) 
 	{
@@ -69,10 +74,12 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 			{
 				if (LootBags.areItemStacksEqualItem(b.getSpecificItem(i), result, true, true)) 
 				{
-					arecipes.add(new CachedLootRecipe(result, k));
+					arecipes.add(new CachedLootRecipe(k));
 					this.bagtype = k;
+		            lastRecipe = -1;
 					break;
 				}
+				else super.loadCraftingRecipes(result);
 			}
 		}
 	}
@@ -80,19 +87,23 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 	@Override
 	public void loadUsageRecipes(ItemStack ingredient) 
 	{
+		bagtype = 0;
 		if (ingredient.getItem() instanceof LootbagItem)
 		{
 			int meta = ingredient.getItemDamage();
 			Bag b = BagHandler.getBag(meta);
+			arecipes.add(new CachedLootRecipe(meta));
 			this.bagtype = meta;
-			arecipes.add(new CachedLootRecipe(b.getSpecificItem(0), meta));
+            lastRecipe = -1;
 		}
+		else super.loadUsageRecipes(ingredient);
 	}
 
 	@Override
 	public void drawExtras(int recipe) 
 	{
 		CachedLootRecipe cachedloot = (CachedLootRecipe) arecipes.get(recipe);
+		cachedloot.cycleOutputs(cycleticks, recipe);
 	}
 
 	public class CachedLootRecipe extends TemplateRecipeHandler.CachedRecipe 
@@ -102,17 +113,19 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 		private long cycleAt;
 		public List<ItemStack> outputs;
 
-		public CachedLootRecipe(ItemStack stack, int bagtype) 
+		public CachedLootRecipe(int bagtype) 
 		{
-			this.stack = stack;
 			set = 0;
+            cycleAt = -1;
+
 			this.outputs = new ArrayList<ItemStack>();
-			lastSet = (this.outputs.size() / (20 + 1));
+
 			Bag b = BagHandler.getBag(bagtype);
 
 			for (int i = 0; i < b.getMap().size(); i++) 
 			{
 				outputs.add(b.getSpecificItem(i));
+	            this.lastSet = (this.outputs.size() / (ITEMS_PER_PAGE + 1));
 			}
 		}
 
@@ -125,7 +138,7 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 		@Override
 		public PositionedStack getResult() 
 		{
-			return new PositionedStack(this.stack, X_FIRST_ITEM, Y_FIRST_ITEM);
+            return new PositionedStack(this.outputs.get(set * ITEMS_PER_PAGE), X_FIRST_ITEM, Y_FIRST_ITEM);
 		}
 
 		@Override
@@ -136,8 +149,7 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 			int y = Y_FIRST_ITEM;
 			for (int i = ITEMS_PER_PAGE * set; i < ITEMS_PER_PAGE * set + ITEMS_PER_PAGE; i++) 
 			{
-				if (i >= this.outputs.size())
-					break;
+				if (i >= this.outputs.size()) break;
 				list.add(new PositionedStack(this.outputs.get(i), x, y));
 				y += SPACING_Y;
 				if (y >= Y_FIRST_ITEM + SPACING_Y * 4) 
@@ -150,5 +162,21 @@ public class NEILootbagHandler extends TemplateRecipeHandler
 				list.remove(0);
 			return list;
 		}
+		
+        public void cycleOutputs(long tick, int recipe)
+        {
+            if (cycleAt == -1 || recipe != lastRecipe)
+            {
+                lastRecipe = recipe;
+                cycleAt = tick + CYCLE_TIME;
+                return;
+            }
+
+            if (tick >= cycleAt)
+            {
+                if (++set > lastSet) set = 0;
+                cycleAt += CYCLE_TIME;
+            }
+        }
 	}
 }
